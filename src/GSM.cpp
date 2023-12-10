@@ -1,9 +1,9 @@
 #include "CodeGen.h"
 #include "Parser.h"
 #include "Sema.h"
-#include "llvm/Support/CommandLine.h"
-#include "llvm/Support/InitLLVM.h"
-#include "llvm/Support/raw_ostream.h"
+#include "/home/soheil/llvm-build/llvm-install/include/llvm/Support/CommandLine.h"
+#include "/home/soheil/llvm-build/llvm-install/include/llvm/Support/InitLLVM.h"
+#include "/home/soheil/llvm-build/llvm-install/include/llvm/Support/raw_ostream.h"
 
 // Define a command-line option for specifying the input expression.
 static llvm::cl::opt<std::string>

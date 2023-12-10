@@ -1,8 +1,8 @@
 #ifndef AST_H
 #define AST_H
 
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringRef.h"
+#include "/home/soheil/llvm-build/llvm-install/include/llvm/ADT/SmallVector.h"
+#include "/home/soheil/llvm-build/llvm-install/include/llvm/ADT/StringRef.h"
 
 // Forward declarations of classes used in the AST
 class AST;

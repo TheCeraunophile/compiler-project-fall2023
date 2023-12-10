@@ -1,6 +1,6 @@
 #include "Sema.h"
-#include "llvm/ADT/StringSet.h"
-#include "llvm/Support/raw_ostream.h"
+#include "/home/soheil/llvm-build/llvm-install/include/llvm/ADT/StringSet.h"
+#include "/home/soheil/llvm-build/llvm-install/include/llvm/Support/raw_ostream.h"
 
 namespace {
 class InputCheck : public ASTVisitor {

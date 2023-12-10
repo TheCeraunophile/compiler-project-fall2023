@@ -1,3 +1,5 @@
+find_package(LLVM 12.0.0 REQUIRED CONFIG)
+
 add_executable (gsm
   GSM.cpp
   CodeGen.cpp
