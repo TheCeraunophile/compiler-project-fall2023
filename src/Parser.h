@@ -49,7 +49,7 @@ class Parser
     Expr *parseNew();
     bool parseIf(llvm::SmallVector<Expr *> &exprs);
     Expr *parseCon();
-    bool parseLoop(llvm::SmallVector<Expr *> &exprs);
+    Expr *parseLoop();
 public:
     // initializes all members and retrieves the first token
     Parser(Lexer &Lex) : Lex(Lex), HasError(false)

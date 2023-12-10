@@ -1,5 +1,6 @@
 #include "Parser.h"
 // #include "llvm/IR/BasicBlock.h"
+#include "/home/soheil/llvm-build/llvm-install/include/llvm/IR/IRBuilder.h"
 
 
 // main point is that the whole input has been consumed
@@ -38,7 +39,10 @@ AST *Parser::parseGSM()
                 goto _error2;
             break;
         case Token::KW_loopc:
-            if(!parseLoop(exprs))
+            a = parseLoop();
+            if(a)
+                exprs.push_back(a);
+            else
                 goto _error2;
             break;
         default:
@@ -258,8 +262,10 @@ _error4:
     return false;
 }
 
-bool Parser::parseLoop(llvm::SmallVector<Expr *> &exprs)
+Expr *Parser::parseLoop()
 {
+    llvm::SmallVector<Expr *> exprs;
+
     Expr *a;
     advance();
 
@@ -303,12 +309,12 @@ bool Parser::parseLoop(llvm::SmallVector<Expr *> &exprs)
     if (!Tok.is(Token::KW_end))
         goto _error5;
     
-    return true;
+    return new LoopStatement(exprs, Con);
 
 _error5:
     while (Tok.getKind() != Token::eoi)
         advance();
-    return false;
+    return nullptr;
 }
 
 Expr *Parser::parseCon()

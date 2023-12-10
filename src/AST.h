@@ -5,6 +5,7 @@
 #include "/home/soheil/llvm-build/llvm-install/include/llvm/ADT/StringRef.h"
 
 // Forward declarations of classes used in the AST
+
 class AST;
 class Expr;
 class GSM;
@@ -12,6 +13,7 @@ class Factor;
 class BinaryOp;
 class Assignment;
 class Declaration;
+class LoopStatement;
 
 // ASTVisitor class defines a visitor pattern to traverse the AST
 class ASTVisitor
@@ -25,6 +27,7 @@ public:
   virtual void visit(BinaryOp &) = 0;        // Visit the binary operation node
   virtual void visit(Assignment &) = 0;      // Visit the assignment expression node
   virtual void visit(Declaration &) = 0;     // Visit the variable declaration node
+  virtual void visit(LoopStatement &) = 0;     // Visit the variable declaration node
 };
 
 // AST class serves as the base class for all AST nodes
@@ -52,6 +55,33 @@ private:
 
 public:
   GSM(llvm::SmallVector<Expr *> exprs) : exprs(exprs) {}
+
+  llvm::SmallVector<Expr *> getExprs() { return exprs; }
+
+  ExprVector::const_iterator begin() { return exprs.begin(); }
+
+  ExprVector::const_iterator end() { return exprs.end(); }
+
+  virtual void accept(ASTVisitor &V) override
+  {
+    V.visit(*this);
+  }
+};
+
+// GSM class represents a group of expressions in the AST
+class LoopStatement : public Expr
+{
+  using ExprVector = llvm::SmallVector<Expr *>;
+
+
+private:
+  ExprVector exprs;                          // Stores the list of expressions
+  Expr *con;
+
+public:
+  LoopStatement(llvm::SmallVector<Expr *> exprs, Expr * con) : exprs(exprs), con(con) {}
+
+  Expr *getCon() { return con; }
 
   llvm::SmallVector<Expr *> getExprs() { return exprs; }
 

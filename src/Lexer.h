@@ -3,6 +3,7 @@
 
 #include "/home/soheil/llvm-build/llvm-install/include/llvm/ADT/StringRef.h"        // encapsulates a pointer to a C string and its length
 #include "/home/soheil/llvm-build/llvm-install/include/llvm/Support/MemoryBuffer.h" // read-only access to a block of memory, filled with the content of a file
+#include "/home/soheil/llvm-build/llvm-install/include/llvm/Support/SMLoc.h"
 
 class Lexer;
 

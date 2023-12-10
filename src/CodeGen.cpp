@@ -3,9 +3,12 @@
 #include "/home/soheil/llvm-build/llvm-install/include/llvm/IR/IRBuilder.h"
 #include "/home/soheil/llvm-build/llvm-install/include/llvm/IR/LLVMContext.h"
 #include "/home/soheil/llvm-build/llvm-install/include/llvm/Support/raw_ostream.h"
+// #include "/home/soheil/llvm-build/llvm-install/include/llvm/IR/Function.h"
 #include "/home/soheil/llvm-build/llvm-install/include/llvm/IR/Intrinsics.h"
+// #include "/home/soheil/llvm-build/llvm-install/include/llvm/IR/Module.h"
 
 using namespace llvm;
+
 // Define a visitor class for generating LLVM IR from the AST.
 namespace
 {
@@ -177,6 +180,33 @@ namespace
           Builder.CreateStore(val, nameMap[Var]);
         }
       }
+    };
+
+    virtual void visit(LoopStatement &Node) override
+    {
+      FunctionType *MainFty = FunctionType::get(Int32Ty, {Int32Ty, Int8PtrPtrTy}, false);
+      Function *MainFn = Function::Create(MainFty, GlobalValue::ExternalLinkage, "main", M);
+
+      llvm::BasicBlock* ConditionLoop = llvm::BasicBlock::Create(M->getContext(), "cindition loop", MainFn);
+      llvm::BasicBlock* BodyLoop = llvm::BasicBlock::Create(M->getContext(), "start loop", MainFn);
+      llvm::BasicBlock* MergeLoop = llvm::BasicBlock::Create(M->getContext(), "end of loop", MainFn);
+
+      Builder.CreateBr(ConditionLoop);
+      Builder.SetInsertPoint(ConditionLoop);
+
+      Node.getCon()->accept(*this);
+      Value* cond = V;
+      Builder.CreateCondBr(cond, BodyLoop, MergeLoop);
+
+      Builder.SetInsertPoint(BodyLoop);
+
+      llvm::SmallVector<Expr *> loop_expressions = Node.getExprs();
+
+      for (auto I = loop_expressions.begin(), E=loop_expressions.end(); I !=E; I++)
+      {
+        (*I)->accept(*this);
+      }
+      
     };
   };
 }; // namespace
