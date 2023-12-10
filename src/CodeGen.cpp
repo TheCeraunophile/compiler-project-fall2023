@@ -3,9 +3,9 @@
 #include "/home/soheil/llvm-build/llvm-install/include/llvm/IR/IRBuilder.h"
 #include "/home/soheil/llvm-build/llvm-install/include/llvm/IR/LLVMContext.h"
 #include "/home/soheil/llvm-build/llvm-install/include/llvm/Support/raw_ostream.h"
+#include "/home/soheil/llvm-build/llvm-install/include/llvm/IR/Intrinsics.h"
 
 using namespace llvm;
-
 // Define a visitor class for generating LLVM IR from the AST.
 namespace
 {
@@ -124,6 +124,30 @@ namespace
         break;
       case BinaryOp::Div:
         V = Builder.CreateSDiv(Left, Right);
+        break;
+      case BinaryOp::Greater:
+        V = Builder.CreateICmpSGT(Left, Right);
+        break;
+      case BinaryOp::Less:
+        V = Builder.CreateICmpSLT(Left, Right);
+        break;
+      case BinaryOp::GreaterEqual:
+        V = Builder.CreateICmpSGE(Left, Right);
+        break;
+      case BinaryOp::LessEqual:
+        V = Builder.CreateICmpSLE(Left, Right);
+        break;
+      case BinaryOp::Equal:
+        V = Builder.CreateICmpEQ(Left, Right);
+        break;
+      case BinaryOp::NotEqual:
+        V = Builder.CreateICmpNE(Left, Right);
+        break;
+      case BinaryOp::Power:
+        llvm::Function *PowiFn = llvm::Intrinsic::getDeclaration(M, llvm::Intrinsic::powi, {Left->getType()});
+        llvm::Value *Args[] = {Left, Right};
+        llvm::CallInst *Call = llvm::CallInst::Create(PowiFn, Args, "", Builder.GetInsertBlock());
+        V = Call;
         break;
       }
     };

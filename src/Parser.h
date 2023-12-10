@@ -41,12 +41,15 @@ class Parser
     }
 
     AST *parseGSM();
-    Expr *parseDec();
+    bool parseDec(llvm::SmallVector<Expr *> &exprs);
     Expr *parseAssign();
     Expr *parseExpr();
     Expr *parseTerm();
     Expr *parseFactor();
-
+    Expr *parseNew();
+    bool parseIf(llvm::SmallVector<Expr *> &exprs);
+    Expr *parseCon();
+    bool parseLoop(llvm::SmallVector<Expr *> &exprs);
 public:
     // initializes all members and retrieves the first token
     Parser(Lexer &Lex) : Lex(Lex), HasError(false)

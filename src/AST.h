@@ -101,7 +101,15 @@ public:
     Plus,
     Minus,
     Mul,
-    Div
+    Div,
+    Power,
+    Mode,
+    Greater,
+    Less,
+    GreaterEqual,
+    LessEqual,
+    Equal,
+    NotEqual
   };
 
 private:
