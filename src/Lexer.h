@@ -26,8 +26,36 @@ public:
         slash,
         l_paren,
         r_paren,
-        KW_type,
-        KW_int
+        // +=, -=, *=, /=, %=
+        plus_equal,
+        minus_equal,
+        star_equal,
+        slash_equal,
+        mod_equal,
+        power_equal,
+        // >, <, >=, <=
+        greater_equal,
+        lower_equal,
+        greater,
+        lower,
+        // ^, %
+        power,
+        mode,
+        // ==, !=
+        not_equal,
+        equal_equal,
+        // KW_if, KW_elif, KW_else
+        KW_if,
+        KW_elif,
+        KW_else,
+        // KW_begin, KW_end
+        KW_begin,
+        KW_end,
+        // KW_loopc
+        KW_loopc,
+        // KW_type,
+        KW_int,
+        // KW_type,
     };
 
 private:

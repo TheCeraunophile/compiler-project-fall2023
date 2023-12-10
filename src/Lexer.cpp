@@ -41,10 +41,22 @@ void Lexer::next(Token &token)
             ++end;
         llvm::StringRef Name(BufferPtr, end - BufferPtr);
         Token::TokenKind kind;
-        if (Name == "type")
-            kind = Token::KW_type;
-        else if (Name == "int")
+        // if (Name == "type")
+        //     kind = Token::KW_type;
+        if (Name == "int")
             kind = Token::KW_int;
+        else if (Name == "loopc")
+            kind = Token::KW_loopc;
+        else if (Name == "if")
+            kind = Token::KW_if;
+        else if (Name == "begin")
+            kind = Token::KW_begin;
+        else if (Name == "end")
+            kind = Token::KW_end;
+        else if (Name == "else")
+            kind = Token::KW_else;
+        else if (Name == "elif")
+            kind = Token::KW_elif;       
         else
             kind = Token::ident;
         // generate the token
@@ -62,25 +74,54 @@ void Lexer::next(Token &token)
     }
     else
     {
-        switch (*BufferPtr)
-        {
-#define CASE(ch, tok)                         \
-    case ch:                                  \
-        formToken(token, BufferPtr + 1, tok); \
-        break
-            CASE('+', Token::plus);
-            CASE('-', Token::minus);
-            CASE('*', Token::star);
-            CASE('/', Token::slash);
-            CASE('(', Token::l_paren);
-            CASE(')', Token::r_paren);
-            CASE(';', Token::semicolon);
-            CASE(',', Token::Token::comma);
-            CASE('=', Token::equal);
-#undef CASE
-        default:
-            formToken(token, BufferPtr + 1, Token::unknown);
-        }
+        if (*BufferPtr == '+' && *(BufferPtr+1) == '=')
+            formToken(token, BufferPtr + 2, Token::plus_equal);
+        else if (*BufferPtr == '-' && *(BufferPtr+1) == '=')
+            formToken(token, BufferPtr + 2, Token::minus_equal);
+        else if (*BufferPtr == '*' && *(BufferPtr+1) == '=')
+            formToken(token, BufferPtr + 2, Token::star_equal);
+        else if (*BufferPtr == '/' && *(BufferPtr+1) == '=')
+            formToken(token, BufferPtr + 2, Token::slash_equal);
+        else if (*BufferPtr == '%' && *(BufferPtr+1) == '=')
+            formToken(token, BufferPtr + 2, Token::mod_equal);
+        else if (*BufferPtr == '^' && *(BufferPtr+1) == '=')
+            formToken(token, BufferPtr + 2, Token::power_equal);
+        else if (*BufferPtr == '>' && *(BufferPtr+1) == '=')
+            formToken(token, BufferPtr + 2, Token::greater_equal);
+        else if (*BufferPtr == '<' && *(BufferPtr+1) == '=')
+            formToken(token, BufferPtr + 2, Token::lower_equal);
+        else if (*BufferPtr == '=' && *(BufferPtr+1) == '=')
+            formToken(token, BufferPtr + 2, Token::equal_equal);
+        else if (*BufferPtr == '!' && *(BufferPtr+1) == '=')
+            formToken(token, BufferPtr + 2, Token::not_equal);
+        else if (*BufferPtr == '+')
+            formToken(token, BufferPtr + 1, Token::plus);
+        else if (*BufferPtr == '-')
+            formToken(token, BufferPtr + 1, Token::minus);
+        else if (*BufferPtr == '*')
+            formToken(token, BufferPtr + 1, Token::star);
+        else if (*BufferPtr == '/')
+            formToken(token, BufferPtr + 1, Token::slash);
+        else if (*BufferPtr == '%')
+            formToken(token, BufferPtr + 1, Token::mode);
+        else if (*BufferPtr == '^')
+            formToken(token, BufferPtr + 1, Token::power);
+        else if (*BufferPtr == '(')
+            formToken(token, BufferPtr + 1, Token::l_paren);
+        else if (*BufferPtr == ')')
+            formToken(token, BufferPtr + 1, Token::r_paren);
+        else if (*BufferPtr == ';')
+            formToken(token, BufferPtr + 1, Token::semicolon);
+        else if (*BufferPtr == ',')
+            formToken(token, BufferPtr + 1, Token::comma);
+        else if (*BufferPtr == '=')
+            formToken(token, BufferPtr + 1, Token::equal);
+        else if (*BufferPtr == '>')
+            formToken(token, BufferPtr + 1, Token::greater);
+        else if (*BufferPtr == '<')
+            formToken(token, BufferPtr + 1, Token::lower);
+        else if (*BufferPtr == ':')
+            formToken(token, BufferPtr + 1, Token::comma);
         return;
     }
 }
