@@ -107,7 +107,8 @@ public:
     // if (Node.getExpr())
     //   Node.getExpr()->accept(*this); // If the Declaration node has an expression, recursively visit the expression node
   };
-
+  virtual void visit(ElseIf &Node) override {};
+  virtual void visit(IfStatement &Node) override {};
 };
 }
 

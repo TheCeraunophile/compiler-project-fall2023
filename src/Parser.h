@@ -47,7 +47,7 @@ class Parser
     Expr *parseTerm();
     Expr *parseFactor();
     Expr *parseNew();
-    bool parseIf(llvm::SmallVector<Expr *> &exprs);
+    Expr *parseIf();
     Expr *parseCon();
     Expr *parseLoop();
 public:

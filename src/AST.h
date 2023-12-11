@@ -14,6 +14,8 @@ class BinaryOp;
 class Assignment;
 class Declaration;
 class LoopStatement;
+class IfStatement;
+class ElseIf;
 
 // ASTVisitor class defines a visitor pattern to traverse the AST
 class ASTVisitor
@@ -28,6 +30,8 @@ public:
   virtual void visit(Assignment &) = 0;      // Visit the assignment expression node
   virtual void visit(Declaration &) = 0;     // Visit the variable declaration node
   virtual void visit(LoopStatement &) = 0;     // Visit the variable declaration node
+  virtual void visit(IfStatement &) = 0;     // Visit the variable declaration node
+  virtual void visit(ElseIf &) = 0;     // Visit the variable declaration node
 };
 
 // AST class serves as the base class for all AST nodes
@@ -175,6 +179,71 @@ public:
   Factor *getLeft() { return Left; }
 
   Expr *getRight() { return Right; }
+
+  virtual void accept(ASTVisitor &V) override
+  {
+    V.visit(*this);
+  }
+};
+
+// Assignment class represents an assignment expression in the AST
+class ElseIf : public Expr
+{
+  using ExprVector = llvm::SmallVector<Expr *>;
+
+private:
+  ExprVector exprs;                          // Stores the list of expressions
+  Expr *Con;
+
+public:
+  ElseIf(Expr *Con, llvm::SmallVector<Expr *> exprs) : Con(Con), exprs(exprs) {}
+
+  Expr *getCon() { return Con; }
+
+  llvm::SmallVector<Expr *> getExprs() { return exprs; }
+
+  ExprVector::const_iterator begin() { return exprs.begin(); }
+
+  ExprVector::const_iterator end() { return exprs.end(); }
+
+  virtual void accept(ASTVisitor &V) override
+  {
+    V.visit(*this);
+  }
+};
+
+// Assignment class represents an assignment expression in the AST
+class IfStatement : public Expr
+{
+  using ExprVector = llvm::SmallVector<Expr *>;
+  // using ElseVector = llvm::SmallVector<ElseIf *>;
+
+private:
+  Expr *Con;
+  ExprVector BodyIf;                          // Stores the list of expressions
+  llvm::SmallVector<ElseIf *> ElseIfs;
+  ExprVector BodyElse;
+public:
+  IfStatement(Expr *Con, llvm::SmallVector<Expr *> BodyIf, llvm::SmallVector<ElseIf *> ElseIfs, llvm::SmallVector<Expr *> BodyElse) : Con(Con), BodyIf(BodyIf), ElseIfs(ElseIfs), BodyElse(BodyElse) {}
+
+  Expr *getCon() { return Con; }
+
+  llvm::SmallVector<Expr *> BodyIfGet() { return BodyIf; }
+  llvm::SmallVector<ElseIf *> ElseIfsGet() { return ElseIfs; }
+  llvm::SmallVector<Expr *> BodyElseGet() { return BodyElse; }
+  
+
+  ExprVector::const_iterator BodyIfBegin() { return BodyIf.begin(); }
+
+  ExprVector::const_iterator BodyIfEnd() { return BodyIf.end(); }
+
+  // ExprVector::const_iterator ElseIfBegin() {return ElseIfs.begin();}
+  
+  // ExprVector::const_iterator ElseIfEnd() {return ElseIfs.end();}
+
+  ExprVector::const_iterator BodyElseBegin() { return BodyElse.begin(); }
+
+  ExprVector::const_iterator BodyElseEnd() { return BodyElse.end(); }
 
   virtual void accept(ASTVisitor &V) override
   {

@@ -1,5 +1,4 @@
 #include "Parser.h"
-// #include "llvm/IR/BasicBlock.h"
 #include "/home/soheil/llvm-build/llvm-install/include/llvm/IR/IRBuilder.h"
 
 
@@ -35,7 +34,10 @@ AST *Parser::parseGSM()
                 goto _error2;
             break;
         case Token::KW_if:
-            if(!parseIf(exprs))
+            a = parseIf();
+            if(a)
+                exprs.push_back(a);
+            else
                 goto _error2;
             break;
         case Token::KW_loopc:
@@ -126,17 +128,21 @@ _error: // TODO: Check this later in case of error :)
     return false;
 }
 
-bool Parser::parseIf(llvm::SmallVector<Expr *> &exprs)
+Expr *Parser::parseIf()
 {
     Expr *a;
+    llvm::SmallVector<Expr *> body_if;
+    llvm::SmallVector<Expr *> body_else;
+    llvm::SmallVector<ElseIf *> ElseIfs;
+    Expr * Con;
+
     advance();
 
-    Expr * Con;
     Con = parseCon();
     if (!Con)
         goto _error4;
 
-    exprs.push_back(Con);
+    // exprs.push_back(Con);
 
     if (!Tok.is(Token::comma))
             goto _error4;
@@ -158,7 +164,14 @@ bool Parser::parseIf(llvm::SmallVector<Expr *> &exprs)
                 goto _error4;
             }
             if (a)
-                exprs.push_back(a);
+                body_if.push_back(a);
+            else
+                goto _error4;
+            break;
+        case Token::KW_loopc:
+            a = parseLoop();
+            if(a)
+                body_if.push_back(a);
             else
                 goto _error4;
             break;
@@ -173,16 +186,22 @@ bool Parser::parseIf(llvm::SmallVector<Expr *> &exprs)
     
     advance();
 
+
+
     if(Tok.getKind() == Token::Token::KW_elif)
     {
         while ((Tok.getKind() == Token::KW_elif) && (Tok.getKind() != Token::eoi))
         {
-            advance();
+            // Expression in body of elif
+            llvm::SmallVector<Expr *> body_if;
+            // Condition of elif
             Expr * Con;
+
+            advance();
             Con = parseCon();
             if (!Con)
                 goto _error4;
-            exprs.push_back(Con);
+            // exprs.push_back(Con);
 
             if (!Tok.is(Token::comma))
                     goto _error4;
@@ -204,7 +223,14 @@ bool Parser::parseIf(llvm::SmallVector<Expr *> &exprs)
                         goto _error4;
                     }
                     if (a)
-                        exprs.push_back(a);
+                        body_if.push_back(a);
+                    else
+                        goto _error4;
+                    break;
+                case Token::KW_loopc:
+                    a = parseLoop();
+                    if(a)
+                        body_if.push_back(a);
                     else
                         goto _error4;
                     break;
@@ -216,8 +242,10 @@ bool Parser::parseIf(llvm::SmallVector<Expr *> &exprs)
             if (!Tok.is(Token::KW_end))
                 goto _error4;
             advance();
+            ElseIfs.push_back(new ElseIf(Con, body_if));
         }
     }
+
 
     if(Tok.getKind() == Token::Token::KW_else)
     {
@@ -238,7 +266,14 @@ bool Parser::parseIf(llvm::SmallVector<Expr *> &exprs)
                     goto _error4;
                 }
                 if (a)
-                    exprs.push_back(a);
+                    body_else.push_back(a);
+                else
+                    goto _error4;
+                break;
+            case Token::KW_loopc:
+                a = parseLoop();
+                if(a)
+                    body_else.push_back(a);
                 else
                     goto _error4;
                 break;
@@ -251,15 +286,12 @@ bool Parser::parseIf(llvm::SmallVector<Expr *> &exprs)
             goto _error4;
     }
 
-    //   return std::make_unique<IfExprAST>(std::move(Cond), std::move(Then),
-    //                                   std::move(Else));
-
-    return true;
+    return new IfStatement(Con, body_if, ElseIfs, body_else);
 
 _error4:
     while (Tok.getKind() != Token::eoi)
         advance();
-    return false;
+    return nullptr;
 }
 
 Expr *Parser::parseLoop()

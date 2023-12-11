@@ -3,9 +3,7 @@
 #include "/home/soheil/llvm-build/llvm-install/include/llvm/IR/IRBuilder.h"
 #include "/home/soheil/llvm-build/llvm-install/include/llvm/IR/LLVMContext.h"
 #include "/home/soheil/llvm-build/llvm-install/include/llvm/Support/raw_ostream.h"
-// #include "/home/soheil/llvm-build/llvm-install/include/llvm/IR/Function.h"
 #include "/home/soheil/llvm-build/llvm-install/include/llvm/IR/Intrinsics.h"
-// #include "/home/soheil/llvm-build/llvm-install/include/llvm/IR/Module.h"
 
 using namespace llvm;
 
@@ -187,9 +185,9 @@ namespace
       FunctionType *MainFty = FunctionType::get(Int32Ty, {Int32Ty, Int8PtrPtrTy}, false);
       Function *MainFn = Function::Create(MainFty, GlobalValue::ExternalLinkage, "main", M);
 
-      llvm::BasicBlock* ConditionLoop = llvm::BasicBlock::Create(M->getContext(), "cindition loop", MainFn);
-      llvm::BasicBlock* BodyLoop = llvm::BasicBlock::Create(M->getContext(), "start loop", MainFn);
-      llvm::BasicBlock* MergeLoop = llvm::BasicBlock::Create(M->getContext(), "end of loop", MainFn);
+      llvm::BasicBlock* ConditionLoop = llvm::BasicBlock::Create(M->getContext(), "LOOPC CONDITION", MainFn);
+      llvm::BasicBlock* BodyLoop = llvm::BasicBlock::Create(M->getContext(), "START LOOP", MainFn);
+      llvm::BasicBlock* MergeLoop = llvm::BasicBlock::Create(M->getContext(), "END LOOP", MainFn);
 
       Builder.CreateBr(ConditionLoop);
       Builder.SetInsertPoint(ConditionLoop);
@@ -206,8 +204,85 @@ namespace
       {
         (*I)->accept(*this);
       }
-      
+
+      Builder.CreateBr(ConditionLoop);
+      Builder.SetInsertPoint(MergeLoop);
     };
+
+    virtual void visit(IfStatement &Node) override
+    {
+      FunctionType *MainFty = FunctionType::get(Int32Ty, {Int32Ty, Int8PtrPtrTy}, false);
+      Function *MainFn = Function::Create(MainFty, GlobalValue::ExternalLinkage, "main", M);
+
+      llvm::BasicBlock* Condition = llvm::BasicBlock::Create(M->getContext(), "IF CONDITION", MainFn);
+      llvm::BasicBlock* BodyIf = llvm::BasicBlock::Create(M->getContext(), "START IF", MainFn);
+      llvm::BasicBlock* Merge = llvm::BasicBlock::Create(M->getContext(), "MERGE AND EXIT", MainFn);
+
+      // llvm::BasicBlock* BodyLoop = llvm::BasicBlock::Create(M->getContext(), "START IF", MainFn);
+      // llvm::BasicBlock* MergeLoop = llvm::BasicBlock::Create(M->getContext(), "END IF", MainFn);
+
+      Builder.CreateBr(Condition);
+      Builder.SetInsertPoint(Condition);
+
+      Node.getCon()->accept(*this);
+      Value* cond = V;
+      llvm::BasicBlock* ConditionElif = llvm::BasicBlock::Create(M->getContext(), "ELIF CONDITION", MainFn);
+      llvm::BasicBlock* ConditionELSE = llvm::BasicBlock::Create(M->getContext(), "ELSE CONDITION", MainFn);
+
+      if(Node.ElseIfsGet().size()!=0)
+        Builder.CreateCondBr(cond, BodyIf, ConditionElif);
+      else if (Node.BodyElseGet().size()!=0)
+        Builder.CreateCondBr(cond, BodyIf, ConditionELSE);
+      else
+        Builder.CreateCondBr(cond, BodyIf, Merge);
+
+      Builder.SetInsertPoint(BodyIf);
+
+      llvm::SmallVector<Expr *> loop_expressions = Node.BodyIfGet();
+
+      for (auto I = loop_expressions.begin(), E=loop_expressions.end(); I !=E; I++)
+      {
+        (*I)->accept(*this);
+      }
+      if(Node.ElseIfsGet().size()!=0)
+      {
+        int I = 0;
+        while(I < Node.ElseIfsGet().size())
+        {
+          printf("%d, \n", I);
+          llvm::BasicBlock* ConditionElif = llvm::BasicBlock::Create(M->getContext(), "ELIF CONDITION", MainFn);
+          llvm::BasicBlock* BodyElif = llvm::BasicBlock::Create(M->getContext(), "START ELIF", MainFn);
+          llvm::BasicBlock* MergeElif = llvm::BasicBlock::Create(M->getContext(), "END ELIF", MainFn);
+
+          ElseIf *BodyElseIf = Node.ElseIfsGet()[I];
+          Builder.CreateBr(ConditionElif);
+          Builder.SetInsertPoint(ConditionElif);
+
+          BodyElseIf->getCon()->accept(*this);
+          cond = V;
+          Builder.CreateCondBr(ConditionElif, BodyElif, MergeElif);
+          Builder.SetInsertPoint(BodyElif);
+
+          llvm::SmallVector<Expr *> elif_expressions = BodyElseIf->getExprs();
+          for (auto I = elif_expressions.begin(), E=elif_expressions.end(); I !=E; I++)
+          {
+            (*I)->accept(*this);
+          }
+          Builder.SetInsertPoint(MergeElif);
+          I++;
+        }
+      }
+
+      if(Node.BodyElseGet().size() != 0)
+      {
+
+        Builder.CreateCondBr(cond, BodyIf, ConditionELSE);        
+      }
+      Builder.SetInsertPoint(Merge);
+    };
+
+
+    virtual void visit(ElseIf &Node) override {}
   };
 }; // namespace
 
