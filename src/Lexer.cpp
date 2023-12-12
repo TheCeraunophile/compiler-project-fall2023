@@ -121,7 +121,7 @@ void Lexer::next(Token &token)
         else if (*BufferPtr == '<')
             formToken(token, BufferPtr + 1, Token::lower);
         else if (*BufferPtr == ':')
-            formToken(token, BufferPtr + 1, Token::comma);
+            formToken(token, BufferPtr + 1, Token::KW_colon);
         return;
     }
 }

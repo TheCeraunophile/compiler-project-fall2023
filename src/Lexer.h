@@ -57,6 +57,7 @@ public:
         // KW_type,
         KW_int,
         // KW_type,
+        KW_colon,
     };
 
 private:

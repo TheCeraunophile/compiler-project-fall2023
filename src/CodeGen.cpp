@@ -226,13 +226,13 @@ namespace
 
       Node.getCon()->accept(*this);
       Value* cond = V;
-      llvm::BasicBlock* ConditionElif = llvm::BasicBlock::Create(M->getContext(), "ELIF CONDITION", MainFn);
-      llvm::BasicBlock* ConditionELSE = llvm::BasicBlock::Create(M->getContext(), "ELSE CONDITION", MainFn);
+      llvm::BasicBlock* ConditionElif = llvm::BasicBlock::Create(M->getContext(), "ELIF CONDITION_1", MainFn);
+      llvm::BasicBlock* ElseStart = llvm::BasicBlock::Create(M->getContext(), "ELSE START", MainFn);
 
       if(Node.ElseIfsGet().size()!=0)
         Builder.CreateCondBr(cond, BodyIf, ConditionElif);
       else if (Node.BodyElseGet().size()!=0)
-        Builder.CreateCondBr(cond, BodyIf, ConditionELSE);
+        Builder.CreateCondBr(cond, BodyIf, ElseStart);
       else
         Builder.CreateCondBr(cond, BodyIf, Merge);
 
@@ -244,18 +244,23 @@ namespace
       {
         (*I)->accept(*this);
       }
+
+      Builder.CreateBr(Merge);
+
       if(Node.ElseIfsGet().size()!=0)
       {
-        int I = 0;
-        while(I < Node.ElseIfsGet().size())
+        int J = 0;
+        while(J < Node.ElseIfsGet().size())
         {
-          printf("%d, \n", I);
-          llvm::BasicBlock* ConditionElif = llvm::BasicBlock::Create(M->getContext(), "ELIF CONDITION", MainFn);
-          llvm::BasicBlock* BodyElif = llvm::BasicBlock::Create(M->getContext(), "START ELIF", MainFn);
-          llvm::BasicBlock* MergeElif = llvm::BasicBlock::Create(M->getContext(), "END ELIF", MainFn);
+          if(J > 0)
+          {
+            Builder.CreateBr(ConditionElif);
+          }
 
-          ElseIf *BodyElseIf = Node.ElseIfsGet()[I];
-          Builder.CreateBr(ConditionElif);
+          llvm::BasicBlock* BodyElif = llvm::BasicBlock::Create(M->getContext(), "START ELIF_" + std::__cxx11::to_string(J+1), MainFn);
+          llvm::BasicBlock* MergeElif = llvm::BasicBlock::Create(M->getContext(), "END ELIF_"  + std::__cxx11::to_string(J+1), MainFn);
+
+          ElseIf *BodyElseIf = Node.ElseIfsGet()[J];
           Builder.SetInsertPoint(ConditionElif);
 
           BodyElseIf->getCon()->accept(*this);
@@ -268,16 +273,40 @@ namespace
           {
             (*I)->accept(*this);
           }
+          Builder.CreateBr(Merge);
+          J++;
+          if (J == Node.ElseIfsGet().size())
+          {
+            Builder.SetInsertPoint(MergeElif);
+            if(Node.ElseIfsGet().size()!=0)
+            {
+              Builder.CreateBr(ElseStart);
+              Builder.SetInsertPoint(ElseStart);
+              llvm::SmallVector<Expr *> else_expressions = Node.BodyElseGet();
+              for (auto I = else_expressions.begin(), E=else_expressions.end(); I !=E; I++)
+              {
+                (*I)->accept(*this);
+              }
+            }
+            break;
+          }
+          ConditionElif = llvm::BasicBlock::Create(M->getContext(), "ELIF CONDITION_" + std::__cxx11::to_string(J+1), MainFn);
           Builder.SetInsertPoint(MergeElif);
-          I++;
         }
       }
 
-      if(Node.BodyElseGet().size() != 0)
+      if(Node.ElseIfsGet().size()!=0 && Node.ElseIfsGet().size()==0)
       {
-
-        Builder.CreateCondBr(cond, BodyIf, ConditionELSE);        
+        Builder.CreateBr(ElseStart);
+        Builder.SetInsertPoint(ElseStart);
+        llvm::SmallVector<Expr *> else_expressions = Node.BodyElseGet();
+        for (auto I = else_expressions.begin(), E=else_expressions.end(); I !=E; I++)
+        {
+          (*I)->accept(*this);
+        }
       }
+
+      Builder.CreateBr(Merge);
       Builder.SetInsertPoint(Merge);
     };
 

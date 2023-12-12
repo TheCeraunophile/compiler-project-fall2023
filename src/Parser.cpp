@@ -144,7 +144,7 @@ Expr *Parser::parseIf()
 
     // exprs.push_back(Con);
 
-    if (!Tok.is(Token::comma))
+    if (!Tok.is(Token::KW_colon))
             goto _error4;
     advance();
 
@@ -203,7 +203,7 @@ Expr *Parser::parseIf()
                 goto _error4;
             // exprs.push_back(Con);
 
-            if (!Tok.is(Token::comma))
+            if (!Tok.is(Token::KW_colon))
                     goto _error4;
             advance();
 
@@ -308,7 +308,7 @@ Expr *Parser::parseLoop()
 
     exprs.push_back(Con);
 
-    if (!Tok.is(Token::comma))
+    if (!Tok.is(Token::KW_colon))
             goto _error5;
     advance();
 

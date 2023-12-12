@@ -98,15 +98,7 @@ public:
       Node.getExpr()->accept(*this); // If the Declaration node has an expression, recursively visit the expression node
   };
 
-  virtual void visit(LoopStatement &Node) override {
-    // for (auto I = Node.begin(), E = Node.end(); I != E;
-    //      ++I) {
-    //   if (!Scope.insert(*I).second)
-    //     error(Twice, *I); // If the insertion fails (element already exists in Scope), report a "Twice" error
-    // }
-    // if (Node.getExpr())
-    //   Node.getExpr()->accept(*this); // If the Declaration node has an expression, recursively visit the expression node
-  };
+  virtual void visit(LoopStatement &Node) override {};
   virtual void visit(ElseIf &Node) override {};
   virtual void visit(IfStatement &Node) override {};
 };
