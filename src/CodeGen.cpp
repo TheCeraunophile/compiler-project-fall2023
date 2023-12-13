@@ -19,6 +19,10 @@ namespace
     Type *Int8PtrTy;
     Type *Int8PtrPtrTy;
     Constant *Int32Zero;
+    FunctionType *MainFty;
+    Function *MainFn;
+    int loopId = 0;
+    int ifId = 0;
 
     Value *V;
     StringMap<AllocaInst *> nameMap;
@@ -39,8 +43,8 @@ namespace
     void run(AST *Tree)
     {
       // Create the main function with the appropriate function type.
-      FunctionType *MainFty = FunctionType::get(Int32Ty, {Int32Ty, Int8PtrPtrTy}, false);
-      Function *MainFn = Function::Create(MainFty, GlobalValue::ExternalLinkage, "main", M);
+      MainFty = FunctionType::get(Int32Ty, {Int32Ty, Int8PtrPtrTy}, false);
+      MainFn = Function::Create(MainFty, GlobalValue::ExternalLinkage, "main", M);
 
       // Create a basic block for the entry point of the main function.
       BasicBlock *BB = BasicBlock::Create(M->getContext(), "entry", MainFn);
@@ -182,12 +186,9 @@ namespace
 
     virtual void visit(LoopStatement &Node) override
     {
-      FunctionType *MainFty = FunctionType::get(Int32Ty, {Int32Ty, Int8PtrPtrTy}, false);
-      Function *MainFn = Function::Create(MainFty, GlobalValue::ExternalLinkage, "main", M);
-
-      llvm::BasicBlock* ConditionLoop = llvm::BasicBlock::Create(M->getContext(), "LOOPC CONDITION", MainFn);
-      llvm::BasicBlock* BodyLoop = llvm::BasicBlock::Create(M->getContext(), "START LOOP", MainFn);
-      llvm::BasicBlock* MergeLoop = llvm::BasicBlock::Create(M->getContext(), "END LOOP", MainFn);
+      llvm::BasicBlock* ConditionLoop = llvm::BasicBlock::Create(M->getContext(), "LOOPC_CONDITION" + std::__cxx11::to_string(loopId), MainFn);
+      llvm::BasicBlock* BodyLoop = llvm::BasicBlock::Create(M->getContext(), "START_LOOP" + std::__cxx11::to_string(loopId), MainFn);
+      llvm::BasicBlock* MergeLoop = llvm::BasicBlock::Create(M->getContext(), "END_LOOP" + std::__cxx11::to_string(loopId), MainFn);
 
       Builder.CreateBr(ConditionLoop);
       Builder.SetInsertPoint(ConditionLoop);
@@ -207,27 +208,22 @@ namespace
 
       Builder.CreateBr(ConditionLoop);
       Builder.SetInsertPoint(MergeLoop);
+      loopId += 1;
     };
 
     virtual void visit(IfStatement &Node) override
     {
-      FunctionType *MainFty = FunctionType::get(Int32Ty, {Int32Ty, Int8PtrPtrTy}, false);
-      Function *MainFn = Function::Create(MainFty, GlobalValue::ExternalLinkage, "main", M);
-
-      llvm::BasicBlock* Condition = llvm::BasicBlock::Create(M->getContext(), "IF CONDITION", MainFn);
-      llvm::BasicBlock* BodyIf = llvm::BasicBlock::Create(M->getContext(), "START IF", MainFn);
-      llvm::BasicBlock* Merge = llvm::BasicBlock::Create(M->getContext(), "MERGE AND EXIT", MainFn);
-
-      // llvm::BasicBlock* BodyLoop = llvm::BasicBlock::Create(M->getContext(), "START IF", MainFn);
-      // llvm::BasicBlock* MergeLoop = llvm::BasicBlock::Create(M->getContext(), "END IF", MainFn);
+      llvm::BasicBlock* Condition = llvm::BasicBlock::Create(M->getContext(), "IF_CONDITION" + std::__cxx11::to_string(ifId), MainFn);
+      llvm::BasicBlock* BodyIf = llvm::BasicBlock::Create(M->getContext(), "START_IF" + std::__cxx11::to_string(ifId), MainFn);
+      llvm::BasicBlock* Merge = llvm::BasicBlock::Create(M->getContext(), "MERGE_AND_EXIT" + std::__cxx11::to_string(ifId), MainFn);
 
       Builder.CreateBr(Condition);
       Builder.SetInsertPoint(Condition);
 
       Node.getCon()->accept(*this);
       Value* cond = V;
-      llvm::BasicBlock* ConditionElif = llvm::BasicBlock::Create(M->getContext(), "ELIF CONDITION_1", MainFn);
-      llvm::BasicBlock* ElseStart = llvm::BasicBlock::Create(M->getContext(), "ELSE START", MainFn);
+      llvm::BasicBlock* ConditionElif = llvm::BasicBlock::Create(M->getContext(), "ELIF_CONDITION_1" + std::__cxx11::to_string(ifId), MainFn);
+      llvm::BasicBlock* ElseStart = llvm::BasicBlock::Create(M->getContext(), "ELSE_START" + std::__cxx11::to_string(ifId), MainFn);
 
       if(Node.ElseIfsGet().size()!=0)
         Builder.CreateCondBr(cond, BodyIf, ConditionElif);
@@ -257,8 +253,8 @@ namespace
             Builder.CreateBr(ConditionElif);
           }
 
-          llvm::BasicBlock* BodyElif = llvm::BasicBlock::Create(M->getContext(), "START ELIF_" + std::__cxx11::to_string(J+1), MainFn);
-          llvm::BasicBlock* MergeElif = llvm::BasicBlock::Create(M->getContext(), "END ELIF_"  + std::__cxx11::to_string(J+1), MainFn);
+          llvm::BasicBlock* BodyElif = llvm::BasicBlock::Create(M->getContext(), "START_ELIF_"  + std::__cxx11::to_string(ifId) + std::__cxx11::to_string(J+1), MainFn);
+          llvm::BasicBlock* MergeElif = llvm::BasicBlock::Create(M->getContext(), "END_ELIF_" + std::__cxx11::to_string(ifId) + std::__cxx11::to_string(J+1), MainFn);
 
           ElseIf *BodyElseIf = Node.ElseIfsGet()[J];
           Builder.SetInsertPoint(ConditionElif);
@@ -278,7 +274,7 @@ namespace
           if (J == Node.ElseIfsGet().size())
           {
             Builder.SetInsertPoint(MergeElif);
-            if(Node.ElseIfsGet().size()!=0)
+            if(Node.BodyElseGet().size()!=0)
             {
               Builder.CreateBr(ElseStart);
               Builder.SetInsertPoint(ElseStart);
@@ -290,14 +286,14 @@ namespace
             }
             break;
           }
-          ConditionElif = llvm::BasicBlock::Create(M->getContext(), "ELIF CONDITION_" + std::__cxx11::to_string(J+1), MainFn);
+          ConditionElif = llvm::BasicBlock::Create(M->getContext(), "ELIF_CONDITION_" + std::__cxx11::to_string(ifId) + std::__cxx11::to_string(J+1), MainFn);
           Builder.SetInsertPoint(MergeElif);
         }
       }
 
-      if(Node.ElseIfsGet().size()!=0 && Node.ElseIfsGet().size()==0)
+      if(Node.BodyElseGet().size()!=0 && Node.ElseIfsGet().size()==0)
       {
-        Builder.CreateBr(ElseStart);
+        // Builder.CreateBr(ElseStart);
         Builder.SetInsertPoint(ElseStart);
         llvm::SmallVector<Expr *> else_expressions = Node.BodyElseGet();
         for (auto I = else_expressions.begin(), E=else_expressions.end(); I !=E; I++)
@@ -308,6 +304,7 @@ namespace
 
       Builder.CreateBr(Merge);
       Builder.SetInsertPoint(Merge);
+      ifId += 1;
     };
 
 
