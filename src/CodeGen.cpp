@@ -162,14 +162,16 @@ namespace
         llvm::BasicBlock* LoopBB = llvm::BasicBlock::Create(Builder.getContext(), "loop", Function);
         llvm::BasicBlock* AfterBB = llvm::BasicBlock::Create(Builder.getContext(), "after", Function);
 
-        llvm::PHINode* Phi = Builder.CreatePHI(Builder.getInt32Ty(), 2, "phi");
-        Phi->addIncoming(Builder.getInt32(1), Builder.GetInsertBlock());
-
         Builder.CreateBr(LoopBB);
         Builder.SetInsertPoint(LoopBB);
 
+        llvm::PHINode* Phi = Builder.CreatePHI(Builder.getInt32Ty(), 2, "phi");
+        Phi->addIncoming(Builder.getInt32(1), &Builder.GetInsertBlock()->getParent()->getEntryBlock());
+        // Phi->addIncoming(Builder.getInt32(1), LoopBB);
+
         llvm::PHINode* Index = Builder.CreatePHI(Builder.getInt32Ty(), 2, "index");
-        Index->addIncoming(Builder.getInt32(0), LoopBB);
+        Index->addIncoming(Builder.getInt32(0), &Builder.GetInsertBlock()->getParent()->getEntryBlock());
+        // Index->addIncoming(Builder.getInt32(0), LoopBB);
 
         llvm::Value* Mul = Builder.CreateNSWMul(Phi, Left);
         llvm::Value* NewPhi = Builder.CreateNSWMul(Mul, Index);
