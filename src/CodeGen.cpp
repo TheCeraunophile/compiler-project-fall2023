@@ -4,6 +4,8 @@
 #include "/home/soheil/llvm-build/llvm-install/include/llvm/IR/LLVMContext.h"
 #include "/home/soheil/llvm-build/llvm-install/include/llvm/Support/raw_ostream.h"
 #include "/home/soheil/llvm-build/llvm-install/include/llvm/IR/Intrinsics.h"
+#include "/home/soheil/llvm-build/llvm-install/include/llvm/IR/Module.h"
+#include "/home/soheil/llvm-build/llvm-install/include/llvm/IR/Type.h"
 
 using namespace llvm;
 
@@ -152,13 +154,38 @@ namespace
       case BinaryOp::NotEqual:
         V = Builder.CreateICmpNE(Left, Right);
         break;
-      case BinaryOp::Power:
-        llvm::Function *PowiFn = llvm::Intrinsic::getDeclaration(M, llvm::Intrinsic::powi, {Left->getType()});
-        llvm::Value *Args[] = {Left, Right};
-        llvm::CallInst *Call = llvm::CallInst::Create(PowiFn, Args, "", Builder.GetInsertBlock());
-        V = Call;
+      case BinaryOp::Mode:
+        V = Builder.CreateSRem(Left, Right);
         break;
-      }
+      case BinaryOp::Power:
+        llvm::Function* Function = Builder.GetInsertBlock()->getParent();
+        llvm::BasicBlock* LoopBB = llvm::BasicBlock::Create(Builder.getContext(), "loop", Function);
+        llvm::BasicBlock* AfterBB = llvm::BasicBlock::Create(Builder.getContext(), "after", Function);
+
+        llvm::PHINode* Phi = Builder.CreatePHI(Builder.getInt32Ty(), 2, "phi");
+        Phi->addIncoming(Builder.getInt32(1), Builder.GetInsertBlock());
+
+        Builder.CreateBr(LoopBB);
+        Builder.SetInsertPoint(LoopBB);
+
+        llvm::PHINode* Index = Builder.CreatePHI(Builder.getInt32Ty(), 2, "index");
+        Index->addIncoming(Builder.getInt32(0), LoopBB);
+
+        llvm::Value* Mul = Builder.CreateNSWMul(Phi, Left);
+        llvm::Value* NewPhi = Builder.CreateNSWMul(Mul, Index);
+        llvm::Value* NewIndex = Builder.CreateAdd(Index, Builder.getInt32(1));
+        
+        Phi->addIncoming(Mul, LoopBB);
+        Index->addIncoming(NewIndex, LoopBB);
+
+        llvm::Value* Comparison = Builder.CreateICmpSLE(NewIndex, Right);
+        Builder.CreateCondBr(Comparison, LoopBB, AfterBB);
+
+        Builder.SetInsertPoint(AfterBB);
+
+            V = Phi;
+            break;
+          }
     };
 
     virtual void visit(Declaration &Node) override
