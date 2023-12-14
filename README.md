@@ -1,6 +1,6 @@
-# Compiler project (Spring 2023)
+# Compiler project (Fall 2023)
 
-A simple compiler project based on llvm. You can find the report [here](https://docs.google.com/document/d/1TWK8OBcipAsg7OCwES159OGB6n_YrkhiAePXsfZPveU/edit?usp=sharing)
+A simple compiler project based on llvm. You can find the report [here](https://drive.google.com/file/d/1-TXCX1-H59gi1oofKAx05_4pMWJ_XzKL/view?usp=sharing)
 
 ## How to run?
 ```
@@ -9,23 +9,42 @@ cd build
 cmake ..
 make
 cd src
-./gsm "<the input you want to be compiled>" > gsm.ll
+./gsm "your code" > gsm.ll
 llc --filetype=obj -o=gsm.o gsm.ll
 clang -o gsmbin gsm.o ../../rtGSM.c
 ```
 
-## Sample inputs
+## Decleration syntax
 ```
-type int a;
-```
-
-```
-type int a = 3 * 9;
+int a, b, c, d = 1, 5, 10;   // a=1, b=5, c=10, d=0
 ```
 
+## Assignment syntax
 ```
-type int a = 4;
-type int b = 4 * 9;
-type int c;
-c = a * b;
+a = 3 * 9;
+a += 12;
 ```
+
+## Loop syntax
+```
+loopc c >= a:
+begin
+    a += 1;
+    ...
+end
+```
+
+## If, elif and else syntax
+```
+if a>b:
+begin
+    ...
+end
+elif a<b:
+begin
+    ...
+end
+else
+begin
+    ...
+end
