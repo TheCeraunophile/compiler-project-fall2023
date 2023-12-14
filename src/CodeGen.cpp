@@ -23,6 +23,8 @@ namespace
     Function *MainFn;
     int loopId = 0;
     int ifId = 0;
+    FunctionType *CalcWriteFnTy = NULL;
+    Function *CalcWriteFn = NULL;
 
     Value *V;
     StringMap<AllocaInst *> nameMap;
@@ -79,11 +81,13 @@ namespace
       // Create a store instruction to assign the value to the variable.
       Builder.CreateStore(val, nameMap[varName]);
 
-      // Create a function type for the "gsm_write" function.
-      FunctionType *CalcWriteFnTy = FunctionType::get(VoidTy, {Int32Ty}, false);
-
-      // Create a function declaration for the "gsm_write" function.
-      Function *CalcWriteFn = Function::Create(CalcWriteFnTy, GlobalValue::ExternalLinkage, "gsm_write", M);
+      if(!CalcWriteFnTy && !CalcWriteFn)
+      {
+        // Create a function type for the "gsm_write" function.
+        CalcWriteFnTy = FunctionType::get(VoidTy, {Int32Ty}, false);
+        // Create a function declaration for the "gsm_write" function.
+        CalcWriteFn = Function::Create(CalcWriteFnTy, GlobalValue::ExternalLinkage, "gsm_write", M);
+      }
 
       // Create a call instruction to invoke the "gsm_write" function with the value.
       CallInst *Call = Builder.CreateCall(CalcWriteFnTy, CalcWriteFn, {val});
@@ -222,16 +226,24 @@ namespace
 
       Node.getCon()->accept(*this);
       Value* cond = V;
-      llvm::BasicBlock* ConditionElif = llvm::BasicBlock::Create(M->getContext(), "ELIF_CONDITION_1" + std::__cxx11::to_string(ifId), MainFn);
-      llvm::BasicBlock* ElseStart = llvm::BasicBlock::Create(M->getContext(), "ELSE_START" + std::__cxx11::to_string(ifId), MainFn);
+      llvm::BasicBlock* ConditionElif;
+      llvm::BasicBlock* ElseStart;
 
-      if(Node.ElseIfsGet().size()!=0)
+      if(Node.ElseIfsGet().size()>0)
+      {
+        ConditionElif = llvm::BasicBlock::Create(M->getContext(), "ELIF_CONDITION_1" + std::__cxx11::to_string(ifId), MainFn);
+        
         Builder.CreateCondBr(cond, BodyIf, ConditionElif);
-      else if (Node.BodyElseGet().size()!=0)
+      }
+      else if (Node.BodyElseGet().size()>0)
+      {
+        ElseStart = llvm::BasicBlock::Create(M->getContext(), "ELSE_START_" + std::__cxx11::to_string(ifId), MainFn);
         Builder.CreateCondBr(cond, BodyIf, ElseStart);
+      }
       else
+      {
         Builder.CreateCondBr(cond, BodyIf, Merge);
-
+      } 
       Builder.SetInsertPoint(BodyIf);
 
       llvm::SmallVector<Expr *> loop_expressions = Node.BodyIfGet();
@@ -261,7 +273,7 @@ namespace
 
           BodyElseIf->getCon()->accept(*this);
           cond = V;
-          Builder.CreateCondBr(ConditionElif, BodyElif, MergeElif);
+          Builder.CreateCondBr(cond, BodyElif, MergeElif);
           Builder.SetInsertPoint(BodyElif);
 
           llvm::SmallVector<Expr *> elif_expressions = BodyElseIf->getExprs();
@@ -276,6 +288,7 @@ namespace
             Builder.SetInsertPoint(MergeElif);
             if(Node.BodyElseGet().size()!=0)
             {
+              ElseStart = llvm::BasicBlock::Create(M->getContext(), "ELSE_START_" + std::__cxx11::to_string(ifId), MainFn);
               Builder.CreateBr(ElseStart);
               Builder.SetInsertPoint(ElseStart);
               llvm::SmallVector<Expr *> else_expressions = Node.BodyElseGet();
@@ -306,7 +319,6 @@ namespace
       Builder.SetInsertPoint(Merge);
       ifId += 1;
     };
-
 
     virtual void visit(ElseIf &Node) override {}
   };
