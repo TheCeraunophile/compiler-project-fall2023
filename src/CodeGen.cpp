@@ -27,6 +27,7 @@ namespace
     int ifId = 0;
     FunctionType *CalcWriteFnTy = NULL;
     Function *CalcWriteFn = NULL;
+    BasicBlock *Last;
 
     Value *V;
     StringMap<AllocaInst *> nameMap;
@@ -53,7 +54,7 @@ namespace
       // Create a basic block for the entry point of the main function.
       BasicBlock *BB = BasicBlock::Create(M->getContext(), "entry", MainFn);
       Builder.SetInsertPoint(BB);
-
+      Last = BB;
       // Visit the root node of the AST to generate IR.
       Tree->accept(*this);
 
@@ -158,20 +159,18 @@ namespace
         V = Builder.CreateSRem(Left, Right);
         break;
       case BinaryOp::Power:
-        llvm::Function* Function = Builder.GetInsertBlock()->getParent();
-        llvm::BasicBlock* LoopBB = llvm::BasicBlock::Create(Builder.getContext(), "loop", Function);
-        llvm::BasicBlock* AfterBB = llvm::BasicBlock::Create(Builder.getContext(), "after", Function);
+        // llvm::Function* Function = Builder.GetInsertBlock()->getParent();
+        llvm::BasicBlock* LoopBB = llvm::BasicBlock::Create(Builder.getContext(), "loop", MainFn);
+        llvm::BasicBlock* AfterBB = llvm::BasicBlock::Create(Builder.getContext(), "after", MainFn);
 
         Builder.CreateBr(LoopBB);
         Builder.SetInsertPoint(LoopBB);
 
         llvm::PHINode* Phi = Builder.CreatePHI(Builder.getInt32Ty(), 2, "phi");
-        Phi->addIncoming(Builder.getInt32(1), &Builder.GetInsertBlock()->getParent()->getEntryBlock());
-        // Phi->addIncoming(Builder.getInt32(1), LoopBB);
+        Phi->addIncoming(Builder.getInt32(1), Last);
 
         llvm::PHINode* Index = Builder.CreatePHI(Builder.getInt32Ty(), 2, "index");
-        Index->addIncoming(Builder.getInt32(0), &Builder.GetInsertBlock()->getParent()->getEntryBlock());
-        // Index->addIncoming(Builder.getInt32(0), LoopBB);
+        Index->addIncoming(Builder.getInt32(0), Last);
 
         llvm::Value* Mul = Builder.CreateNSWMul(Phi, Left);
         llvm::Value* NewPhi = Builder.CreateNSWMul(Mul, Index);
@@ -185,9 +184,10 @@ namespace
 
         Builder.SetInsertPoint(AfterBB);
 
-            V = Phi;
-            break;
-          }
+        V = Phi;
+        Last = AfterBB;
+        break;
+      }
     };
 
     virtual void visit(Declaration &Node) override
@@ -225,12 +225,14 @@ namespace
 
       Builder.CreateBr(ConditionLoop);
       Builder.SetInsertPoint(ConditionLoop);
+      Last = ConditionLoop;
 
       Node.getCon()->accept(*this);
       Value* cond = V;
       Builder.CreateCondBr(cond, BodyLoop, MergeLoop);
 
       Builder.SetInsertPoint(BodyLoop);
+      Last = BodyLoop;
 
       llvm::SmallVector<Expr *> loop_expressions = Node.getExprs();
 
@@ -241,6 +243,7 @@ namespace
 
       Builder.CreateBr(ConditionLoop);
       Builder.SetInsertPoint(MergeLoop);
+      Last = MergeLoop;
       loopId += 1;
     };
 
@@ -252,6 +255,7 @@ namespace
 
       Builder.CreateBr(Condition);
       Builder.SetInsertPoint(Condition);
+      Last = Condition;
 
       Node.getCon()->accept(*this);
       Value* cond = V;
@@ -274,6 +278,7 @@ namespace
         Builder.CreateCondBr(cond, BodyIf, Merge);
       } 
       Builder.SetInsertPoint(BodyIf);
+      Last = BodyIf;
 
       llvm::SmallVector<Expr *> loop_expressions = Node.BodyIfGet();
 
@@ -283,6 +288,7 @@ namespace
       }
 
       Builder.CreateBr(Merge);
+      Last = Merge;
 
       if(Node.ElseIfsGet().size()!=0)
       {
@@ -299,11 +305,13 @@ namespace
 
           ElseIf *BodyElseIf = Node.ElseIfsGet()[J];
           Builder.SetInsertPoint(ConditionElif);
+          Last = ConditionElif;
 
           BodyElseIf->getCon()->accept(*this);
           cond = V;
           Builder.CreateCondBr(cond, BodyElif, MergeElif);
           Builder.SetInsertPoint(BodyElif);
+          Last = BodyElif;
 
           llvm::SmallVector<Expr *> elif_expressions = BodyElseIf->getExprs();
           for (auto I = elif_expressions.begin(), E=elif_expressions.end(); I !=E; I++)
@@ -315,11 +323,13 @@ namespace
           if (J == Node.ElseIfsGet().size())
           {
             Builder.SetInsertPoint(MergeElif);
+            Last = MergeElif;
             if(Node.BodyElseGet().size()!=0)
             {
               ElseStart = llvm::BasicBlock::Create(M->getContext(), "ELSE_START_" + std::__cxx11::to_string(ifId), MainFn);
               Builder.CreateBr(ElseStart);
               Builder.SetInsertPoint(ElseStart);
+              Last = ElseStart;
               llvm::SmallVector<Expr *> else_expressions = Node.BodyElseGet();
               for (auto I = else_expressions.begin(), E=else_expressions.end(); I !=E; I++)
               {
@@ -330,6 +340,7 @@ namespace
           }
           ConditionElif = llvm::BasicBlock::Create(M->getContext(), "ELIF_CONDITION_" + std::__cxx11::to_string(ifId) + std::__cxx11::to_string(J+1), MainFn);
           Builder.SetInsertPoint(MergeElif);
+          Last = MergeElif;
         }
       }
 
@@ -337,6 +348,7 @@ namespace
       {
         // Builder.CreateBr(ElseStart);
         Builder.SetInsertPoint(ElseStart);
+        Last = ElseStart;
         llvm::SmallVector<Expr *> else_expressions = Node.BodyElseGet();
         for (auto I = else_expressions.begin(), E=else_expressions.end(); I !=E; I++)
         {
@@ -346,6 +358,7 @@ namespace
 
       Builder.CreateBr(Merge);
       Builder.SetInsertPoint(Merge);
+      Last = Merge;
       ifId += 1;
     };
 

@@ -353,7 +353,7 @@ Expr *Parser::parseCon()
 {
     Expr *L;
     L = parseExpr();
-    
+
     BinaryOp::Operator Op;
 
     switch (Tok.getKind())
@@ -466,10 +466,15 @@ Expr *Parser::parseExpr()
 Expr *Parser::parseTerm()
 {
     Expr *Left = parseNew();
-    while (Tok.isOneOf(Token::star, Token::slash))
+    while (Tok.isOneOf(Token::star, Token::slash, Token::mode))
     {
-        BinaryOp::Operator Op =
-            Tok.is(Token::star) ? BinaryOp::Mul : BinaryOp::Div;
+        BinaryOp::Operator Op;
+        if(Tok.is(Token::star))
+            Op = BinaryOp::Mul;
+        else if(Tok.is(Token::slash))
+            Op = BinaryOp::Div;
+        else if(Tok.is(Token::mode))
+            Op = BinaryOp::Mode;
         advance();
         Expr *Right = parseNew();
         Left = new BinaryOp(Op, Left, Right);
