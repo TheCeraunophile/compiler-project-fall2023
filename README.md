@@ -1,6 +1,6 @@
 # Compiler project (Fall 2023)
 
-A simple compiler project based on llvm. You can find the report [here](https://drive.google.com/file/d/1-TXCX1-H59gi1oofKAx05_4pMWJ_XzKL/view?usp=sharing)
+A simple compiler project based on llvm. You can find the report [here](https://drive.google.com/file/d/1t3pAOdxdsWwCmxDgqKOwZfNLS1-DXySL/view?usp=sharing) and the project explanation is [here](https://drive.google.com/file/d/1-TXCX1-H59gi1oofKAx05_4pMWJ_XzKL/view?usp=sharing).
 
 ## How to run?
 ```
@@ -14,7 +14,7 @@ llc --filetype=obj -o=gsm.o gsm.ll
 clang -o gsmbin gsm.o ../../rtGSM.c
 ```
 
-## Decleration syntax
+## Declaration syntax
 ```
 int a, b, c, d = 1, 5, 10;   // a=1, b=5, c=10, d=0
 ```
