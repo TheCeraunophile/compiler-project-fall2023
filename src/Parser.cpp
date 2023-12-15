@@ -142,8 +142,6 @@ Expr *Parser::parseIf()
     if (!Con)
         goto _error4;
 
-    // exprs.push_back(Con);
-
     if (!Tok.is(Token::KW_colon))
             goto _error4;
     advance();
@@ -175,6 +173,12 @@ Expr *Parser::parseIf()
             else
                 goto _error4;
             break;
+        case Token::KW_if:
+            a = parseIf();
+            if(a)
+                body_if.push_back(a);
+            else
+                goto _error4;
         default:
             goto _error4;
         }
@@ -193,7 +197,7 @@ Expr *Parser::parseIf()
         while ((Tok.getKind() == Token::KW_elif) && (Tok.getKind() != Token::eoi))
         {
             // Expression in body of elif
-            llvm::SmallVector<Expr *> body_if;
+            llvm::SmallVector<Expr *> body_elif;
             // Condition of elif
             Expr * Con;
 
@@ -201,7 +205,6 @@ Expr *Parser::parseIf()
             Con = parseCon();
             if (!Con)
                 goto _error4;
-            // exprs.push_back(Con);
 
             if (!Tok.is(Token::KW_colon))
                     goto _error4;
@@ -223,17 +226,23 @@ Expr *Parser::parseIf()
                         goto _error4;
                     }
                     if (a)
-                        body_if.push_back(a);
+                        body_elif.push_back(a);
                     else
                         goto _error4;
                     break;
                 case Token::KW_loopc:
                     a = parseLoop();
                     if(a)
-                        body_if.push_back(a);
+                        body_elif.push_back(a);
                     else
                         goto _error4;
                     break;
+                case Token::KW_if:
+                    a = parseIf();
+                    if(a)
+                        body_elif.push_back(a);
+                    else
+                        goto _error4;
                 default:
                     goto _error4;
                 }
@@ -242,7 +251,7 @@ Expr *Parser::parseIf()
             if (!Tok.is(Token::KW_end))
                 goto _error4;
             advance();
-            ElseIfs.push_back(new ElseIf(Con, body_if));
+            ElseIfs.push_back(new ElseIf(Con, body_elif));
         }
     }
 
@@ -277,6 +286,12 @@ Expr *Parser::parseIf()
                 else
                     goto _error4;
                 break;
+            case Token::KW_if:
+                a = parseIf();
+                if(a)
+                    body_else.push_back(a);
+                else
+                    goto _error4;
             default:
                 goto _error4;
             }
@@ -306,8 +321,6 @@ Expr *Parser::parseLoop()
     if (!Con)
         goto _error5;
 
-    exprs.push_back(Con);
-
     if (!Tok.is(Token::KW_colon))
             goto _error5;
     advance();
@@ -328,6 +341,20 @@ Expr *Parser::parseLoop()
                 goto _error5;
             }
             if (a)
+                exprs.push_back(a);
+            else
+                goto _error5;
+            break;
+        case Token::KW_if:
+            a = parseIf();
+            if(a)
+                exprs.push_back(a);
+            else
+                goto _error5;
+            break;
+        case Token::KW_loopc:
+            a = parseLoop();
+            if(a)
                 exprs.push_back(a);
             else
                 goto _error5;

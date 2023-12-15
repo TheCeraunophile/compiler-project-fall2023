@@ -219,6 +219,9 @@ namespace
 
     virtual void visit(LoopStatement &Node) override
     {
+
+      loopId += 1;
+
       llvm::BasicBlock* ConditionLoop = llvm::BasicBlock::Create(M->getContext(), "LOOPC_CONDITION" + std::__cxx11::to_string(loopId), MainFn);
       llvm::BasicBlock* BodyLoop = llvm::BasicBlock::Create(M->getContext(), "START_LOOP" + std::__cxx11::to_string(loopId), MainFn);
       llvm::BasicBlock* MergeLoop = llvm::BasicBlock::Create(M->getContext(), "END_LOOP" + std::__cxx11::to_string(loopId), MainFn);
@@ -244,11 +247,13 @@ namespace
       Builder.CreateBr(ConditionLoop);
       Builder.SetInsertPoint(MergeLoop);
       Last = MergeLoop;
-      loopId += 1;
     };
 
     virtual void visit(IfStatement &Node) override
     {
+      
+      ifId += 1;
+
       llvm::BasicBlock* Condition = llvm::BasicBlock::Create(M->getContext(), "IF_CONDITION" + std::__cxx11::to_string(ifId), MainFn);
       llvm::BasicBlock* BodyIf = llvm::BasicBlock::Create(M->getContext(), "START_IF" + std::__cxx11::to_string(ifId), MainFn);
       llvm::BasicBlock* Merge = llvm::BasicBlock::Create(M->getContext(), "MERGE_AND_EXIT" + std::__cxx11::to_string(ifId), MainFn);
@@ -359,7 +364,6 @@ namespace
       Builder.CreateBr(Merge);
       Builder.SetInsertPoint(Merge);
       Last = Merge;
-      ifId += 1;
     };
 
     virtual void visit(ElseIf &Node) override {}
