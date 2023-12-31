@@ -48,6 +48,7 @@ int main(int argc, const char **argv)
     // Perform optimization analysis on the AST.
     Opt Optimizer;
     Optimizer.optimizer(Tree);
+    Tree = Optimizer.Tree;
 
     // Generate code for the AST using a code generator.
     CodeGen CodeGenerator;

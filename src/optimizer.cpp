@@ -10,13 +10,16 @@ using namespace std;
 
 Assignment * LastResultAssignment;
 Expr * RightHandSide;
+
 bool ResultFinder;
 bool OnCheck;
 bool Flag = false;
-// string VariableName;
+
 string VariableName[100];
 int VariableNameNextIndex = 1;
 int VariableNameLastIndex = 0;
+
+int ResoltPointer = 0;
 
 namespace {
 class InputCheck : public ASTVisitor {
@@ -55,7 +58,7 @@ public:
           auto it = std::find(std::begin(VariableName), std::end(VariableName), Node.getVal().str().c_str());
           if (it != std::end(VariableName)) {}
           else {
-            llvm::errs() << Node.getVal().str().c_str()<<"\n";
+            llvm::errs() << Node.getVal().str().c_str()<<", ";
             VariableName[VariableNameNextIndex++] = Node.getVal().str().c_str();
           }
         }
@@ -97,6 +100,10 @@ public:
 
   // Visit function for Assignment nodes
   virtual void visit(Assignment &Node) override {
+    if (!Flag)
+    {
+      ResoltPointer++;
+    }
     Factor *dest = Node.getLeft();
 
     dest->accept(*this);
@@ -136,6 +143,10 @@ public:
   };
 
   virtual void visit(Declaration &Node) override {
+    if (ResultFinder)
+    {
+      ResoltPointer++;
+    }    
     for (auto I = Node.begin(), E = Node.end(); I != E;
          ++I)
     {
@@ -176,47 +187,32 @@ void Opt::optimizer(AST *Tree) {
   ResultFinder = true;
   OnCheck = false;
 
-  // GSM * tmp = (GSM *)Tree;
-  // llvm::SmallVector<Expr *> commands = tmp->getExprs();
-  // int index = 0;
-  // for (auto I = commands.end(), E=commands.begin(); I !=E; I--)
-  // {
-  //   llvm::errs() << "--\n"; 
-  //   (*I)->accept(Checks[CheckIndex++]);
-  //   llvm::errs() << "--\n"; 
-  //   index++; 
-  //   if(Flag)
-  //     break;
-  // }
-  // llvm::errs() << "Result found " << index << "\n"; 
-  // commands.erase(commands.end() + index, commands.end() );
-  // GSM * alter = new GSM(commands);
-  // Tree = (AST *) alter;
-  // for (auto i : commands) {
-  //   llvm::errs() << "COMMAND" << "\n";
-  // }
+  GSM * tmp = (GSM *)Tree;
+  llvm::SmallVector<Expr *> commands = tmp->getExprs();
 
   Tree->accept(Checks[CheckIndex++]); // Find the last Assignment to the Result value by traversing the AST using the accept function
+  commands.erase(commands.begin() + ResoltPointer - 1, commands.end());
+
+  llvm::errs() << "Resolt Fount on " << ResoltPointer - 1<< "th command: \n";
+  GSM * alter = new GSM(commands);
+  Tree = (AST *) alter;
 
   ResultFinder = false;
-  // InputCheck Check2;
+  llvm::errs() << "Live variables: ";
   Tree->accept(Checks[CheckIndex++]); // Find the last Assignment to the Result value by traversing the AST using the accept function
 
   while (VariableNameLastIndex < VariableNameNextIndex - 1)
   {
     VariableNameLastIndex ++;
     OnCheck = false;
-    ResultFinder = true;
-    
-    // InputCheck Check3;
+
+    ResultFinder = true;    
     Tree->accept(Checks[CheckIndex++]); // Find the last Assignment to the Result value by traversing the AST using the accept function
 
     ResultFinder = false;
-    // InputCheck Check4;
     Tree->accept(Checks[CheckIndex++]); // Find the last Assignment to the Result value by traversing the AST using the accept function
   }
-  
+  llvm::errs() << "\n";
   Opt::Tree = Tree;
   return;
-
 }
