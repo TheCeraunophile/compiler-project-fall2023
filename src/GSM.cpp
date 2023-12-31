@@ -1,6 +1,7 @@
 #include "CodeGen.h"
 #include "Parser.h"
 #include "Sema.h"
+#include "optimizer.h"
 #include "/home/soheil/llvm-build/llvm-install/include/llvm/Support/CommandLine.h"
 #include "/home/soheil/llvm-build/llvm-install/include/llvm/Support/InitLLVM.h"
 #include "/home/soheil/llvm-build/llvm-install/include/llvm/Support/raw_ostream.h"
@@ -43,6 +44,15 @@ int main(int argc, const char **argv)
         llvm::errs() << "Semantic errors occurred\n";
         return 1;
     }
+
+    // Perform optimization analysis on the AST.
+    Opt Optimizer;
+    Optimizer.optimizer(Tree);
+    // if (Optimizer.optimizer(Tree))
+    // {
+        // llvm::errs() << "Semantic errors occurred\n";
+    //     return 1;
+    // }
 
     // Generate code for the AST using a code generator.
     CodeGen CodeGenerator;

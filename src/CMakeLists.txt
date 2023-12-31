@@ -6,5 +6,6 @@ add_executable (gsm
   Lexer.cpp
   Parser.cpp
   Sema.cpp
+  optimizer.cpp
   )
 target_link_libraries(gsm PRIVATE ${llvm_libs})
