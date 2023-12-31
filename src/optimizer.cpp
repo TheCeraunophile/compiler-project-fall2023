@@ -4,12 +4,17 @@
 
 #include <iostream>
 #include <string>
+using namespace std;
 
 Assignment * LastResultAssignment;
 Expr * RightHandSide;
 bool ResultFinder;
 bool OnCheck;
 
+// string VariableName;
+string VariableName[100];
+int VariableNameNextIndex = 0;
+int VariableNameLastIndex = 0;
 
 namespace {
 class InputCheck : public ASTVisitor {
@@ -41,10 +46,14 @@ public:
 
   // Visit function for Factor nodes
   virtual void visit(Factor &Node) override {
-    if (OnCheck)
+    if (OnCheck && Node.getKind() == Factor::Ident)
       {
-        system(Node.getVal().str().c_str());
-      }
+        if (VariableName[VariableNameLastIndex] != Node.getVal())
+        {
+          llvm::errs() << Node.getVal().str().c_str()<<"\n";
+          VariableName[VariableNameNextIndex++] = Node.getVal().str().c_str();
+        }
+        }
     if (Node.getKind() == Factor::Ident) {
       // Check if identifier is in the scope
       if (Scope.find(Node.getVal()) == Scope.end())
@@ -93,13 +102,13 @@ public:
 
     if (dest->getKind() == Factor::Ident) {
       if (ResultFinder && !OnCheck)
-        if (dest->getVal().str().find("Result") != std::string::npos) {
+        if (dest->getVal().str().find(VariableName[VariableNameLastIndex]) != std::string::npos) {
             // system(dest->getVal().str().c_str());
             LastResultAssignment = &Node;
         }
       if (!ResultFinder && !OnCheck)
       {
-        if (dest->getVal().str().find("Result") != std::string::npos)
+        if (dest->getVal().str().find(VariableName[VariableNameLastIndex]) != std::string::npos)
         {
             if (LastResultAssignment == &Node)
             {
@@ -123,7 +132,7 @@ public:
          ++I)
     {
       if (ResultFinder && !OnCheck)
-        if (((llvm::StringRef *)I)->str().find("Result") != std::string::npos) {
+        if (((llvm::StringRef *)I)->str().find(VariableName[VariableNameLastIndex]) != std::string::npos) {
             // system(((llvm::StringRef *)I)->str().c_str());
         }
       if (!Scope.insert(*I).second)
@@ -149,15 +158,38 @@ void Opt::optimizer(AST *Tree) {
   if (!Tree)
     return ; // If the input AST is not valid, return false indicating no errors
 
-  InputCheck Check; // Create an instance of the InputCheck class for semantic analysis
+  InputCheck Checks[100];
+  int CheckIndex = 0;
+
+
+  VariableName[0] = "Result";
+
+  // InputCheck Check; // Create an instance of the InputCheck class for semantic analysis
   ResultFinder = true;
   OnCheck = false;
-  Tree->accept(Check); // Find the last Assignment to the Result value by traversing the AST using the accept function
+  Tree->accept(Checks[CheckIndex++]); // Find the last Assignment to the Result value by traversing the AST using the accept function
 
   ResultFinder = false;
-  InputCheck Check2;
-  Tree->accept(Check2); // Find the last Assignment to the Result value by traversing the AST using the accept function
+  // InputCheck Check2;
+  Tree->accept(Checks[CheckIndex++]); // Find the last Assignment to the Result value by traversing the AST using the accept function
 
+  while (VariableNameLastIndex < VariableNameNextIndex - 1)
+  {
+    VariableNameLastIndex ++;
+    ResultFinder = true;
+
+    // llvm::errs() << "Previouse " << VariableNameLastIndex <<"\n";
+    // llvm::errs() << "Next " << VariableNameNextIndex <<"\n";
+
+    OnCheck = false;
+    // InputCheck Check3;
+    Tree->accept(Checks[CheckIndex++]); // Find the last Assignment to the Result value by traversing the AST using the accept function
+
+    ResultFinder = false;
+    // InputCheck Check4;
+    Tree->accept(Checks[CheckIndex++]); // Find the last Assignment to the Result value by traversing the AST using the accept function
+  }
+  
   // OnCheck = true;
   // InputCheck Check3;
   // Tree->accept(Check3); // Find the last Assignment to the Result value by traversing the AST using the accept function
