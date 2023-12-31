@@ -7,6 +7,7 @@
 class Opt {
 public:
   void optimizer(AST *Tree);
+  AST *Tree;
 };
 
 #endif

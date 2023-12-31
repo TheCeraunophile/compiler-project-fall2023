@@ -3,17 +3,19 @@
 #include "/home/soheil/llvm-build/llvm-install/include/llvm/Support/raw_ostream.h"
 
 #include <iostream>
+#include <algorithm>
 #include <string>
+
 using namespace std;
 
 Assignment * LastResultAssignment;
 Expr * RightHandSide;
 bool ResultFinder;
 bool OnCheck;
-
+bool Flag = false;
 // string VariableName;
 string VariableName[100];
-int VariableNameNextIndex = 0;
+int VariableNameNextIndex = 1;
 int VariableNameLastIndex = 0;
 
 namespace {
@@ -50,8 +52,12 @@ public:
       {
         if (VariableName[VariableNameLastIndex] != Node.getVal())
         {
-          llvm::errs() << Node.getVal().str().c_str()<<"\n";
-          VariableName[VariableNameNextIndex++] = Node.getVal().str().c_str();
+          auto it = std::find(std::begin(VariableName), std::end(VariableName), Node.getVal().str().c_str());
+          if (it != std::end(VariableName)) {}
+          else {
+            llvm::errs() << Node.getVal().str().c_str()<<"\n";
+            VariableName[VariableNameNextIndex++] = Node.getVal().str().c_str();
+          }
         }
         }
     if (Node.getKind() == Factor::Ident) {
@@ -105,6 +111,8 @@ public:
         if (dest->getVal().str().find(VariableName[VariableNameLastIndex]) != std::string::npos) {
             // system(dest->getVal().str().c_str());
             LastResultAssignment = &Node;
+            if(!Flag)
+              Flag = true;
         }
       if (!ResultFinder && !OnCheck)
       {
@@ -167,6 +175,27 @@ void Opt::optimizer(AST *Tree) {
   // InputCheck Check; // Create an instance of the InputCheck class for semantic analysis
   ResultFinder = true;
   OnCheck = false;
+
+  // GSM * tmp = (GSM *)Tree;
+  // llvm::SmallVector<Expr *> commands = tmp->getExprs();
+  // int index = 0;
+  // for (auto I = commands.end(), E=commands.begin(); I !=E; I--)
+  // {
+  //   llvm::errs() << "--\n"; 
+  //   (*I)->accept(Checks[CheckIndex++]);
+  //   llvm::errs() << "--\n"; 
+  //   index++; 
+  //   if(Flag)
+  //     break;
+  // }
+  // llvm::errs() << "Result found " << index << "\n"; 
+  // commands.erase(commands.end() + index, commands.end() );
+  // GSM * alter = new GSM(commands);
+  // Tree = (AST *) alter;
+  // for (auto i : commands) {
+  //   llvm::errs() << "COMMAND" << "\n";
+  // }
+
   Tree->accept(Checks[CheckIndex++]); // Find the last Assignment to the Result value by traversing the AST using the accept function
 
   ResultFinder = false;
@@ -176,12 +205,9 @@ void Opt::optimizer(AST *Tree) {
   while (VariableNameLastIndex < VariableNameNextIndex - 1)
   {
     VariableNameLastIndex ++;
-    ResultFinder = true;
-
-    // llvm::errs() << "Previouse " << VariableNameLastIndex <<"\n";
-    // llvm::errs() << "Next " << VariableNameNextIndex <<"\n";
-
     OnCheck = false;
+    ResultFinder = true;
+    
     // InputCheck Check3;
     Tree->accept(Checks[CheckIndex++]); // Find the last Assignment to the Result value by traversing the AST using the accept function
 
@@ -190,10 +216,7 @@ void Opt::optimizer(AST *Tree) {
     Tree->accept(Checks[CheckIndex++]); // Find the last Assignment to the Result value by traversing the AST using the accept function
   }
   
-  // OnCheck = true;
-  // InputCheck Check3;
-  // Tree->accept(Check3); // Find the last Assignment to the Result value by traversing the AST using the accept function
-  // RightHandSide->accept(Opt);
+  Opt::Tree = Tree;
   return;
 
 }
