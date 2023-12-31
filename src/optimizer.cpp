@@ -6,6 +6,9 @@
 #include <string>
 
 Assignment * LastResultAssignment;
+Expr * RightHandSide;
+bool ResultFinder;
+bool OnCheck;
 
 
 namespace {
@@ -38,8 +41,11 @@ public:
 
   // Visit function for Factor nodes
   virtual void visit(Factor &Node) override {
+    if (OnCheck)
+      {
+        system(Node.getVal().str().c_str());
+      }
     if (Node.getKind() == Factor::Ident) {
-      // system(Node.getVal().str().c_str());
       // Check if identifier is in the scope
       if (Scope.find(Node.getVal()) == Scope.end())
         error(Not, Node.getVal());
@@ -86,10 +92,21 @@ public:
     }
 
     if (dest->getKind() == Factor::Ident) {
-      if (dest->getVal().str().find("Result") != std::string::npos) {
-        system(dest->getVal().str().c_str());
-        LastResultAssignment = &Node;
-        // system(LastResultAssignment->getLeft()->getVal().str().c_str());
+      if (ResultFinder && !OnCheck)
+        if (dest->getVal().str().find("Result") != std::string::npos) {
+            // system(dest->getVal().str().c_str());
+            LastResultAssignment = &Node;
+        }
+      if (!ResultFinder && !OnCheck)
+      {
+        if (dest->getVal().str().find("Result") != std::string::npos)
+        {
+            if (LastResultAssignment == &Node)
+            {
+                RightHandSide = Node.getRight();
+                OnCheck = true;
+            }
+        }
       }
       // Check if the identifier is in the scope
       if (Scope.find(dest->getVal()) == Scope.end())
@@ -98,15 +115,17 @@ public:
 
     if (Node.getRight())
       Node.getRight()->accept(*this);
+    OnCheck = false;
   };
 
   virtual void visit(Declaration &Node) override {
     for (auto I = Node.begin(), E = Node.end(); I != E;
          ++I)
     {
-      if (((llvm::StringRef *)I)->str().find("Result") != std::string::npos) {
-        system(((llvm::StringRef *)I)->str().c_str());
-      }
+      if (ResultFinder && !OnCheck)
+        if (((llvm::StringRef *)I)->str().find("Result") != std::string::npos) {
+            // system(((llvm::StringRef *)I)->str().c_str());
+        }
       if (!Scope.insert(*I).second)
         error(Twice, *I); // If the insertion fails (element already exists in Scope), report a "Twice" error
     }
@@ -126,12 +145,23 @@ public:
 };
 }
 
-bool Opt::optimizer(AST *Tree) {
+void Opt::optimizer(AST *Tree) {
   if (!Tree)
-    return false; // If the input AST is not valid, return false indicating no errors
+    return ; // If the input AST is not valid, return false indicating no errors
 
   InputCheck Check; // Create an instance of the InputCheck class for semantic analysis
+  ResultFinder = true;
+  OnCheck = false;
   Tree->accept(Check); // Find the last Assignment to the Result value by traversing the AST using the accept function
 
-  return Check.hasError(); // Return the result of Check.hasError() indicating if any errors were detected during the analysis
+  ResultFinder = false;
+  InputCheck Check2;
+  Tree->accept(Check2); // Find the last Assignment to the Result value by traversing the AST using the accept function
+
+  // OnCheck = true;
+  // InputCheck Check3;
+  // Tree->accept(Check3); // Find the last Assignment to the Result value by traversing the AST using the accept function
+  // RightHandSide->accept(Opt);
+  return;
+
 }
