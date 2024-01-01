@@ -19,6 +19,10 @@ string VariableName[100];
 int VariableNameNextIndex = 1;
 int VariableNameLastIndex = 0;
 
+// string OnDelete;
+bool DeleteTime;
+bool AsertDelete = false;
+
 int ResoltPointer = 0;
 
 namespace {
@@ -58,15 +62,12 @@ public:
           auto it = std::find(std::begin(VariableName), std::end(VariableName), Node.getVal().str().c_str());
           if (it != std::end(VariableName)) {}
           else {
-            llvm::errs() << Node.getVal().str().c_str()<<", ";
             VariableName[VariableNameNextIndex++] = Node.getVal().str().c_str();
           }
         }
         }
     if (Node.getKind() == Factor::Ident) {
       // Check if identifier is in the scope
-      if (Scope.find(Node.getVal()) == Scope.end())
-        error(Not, Node.getVal());
     }
   };
 
@@ -90,10 +91,10 @@ public:
         int intval;
         f->getVal().getAsInteger(10, intval);
 
-        if (intval == 0) {
-          llvm::errs() << "Division by zero is not allowed." << "\n";
-          HasError = true;
-        }
+        // if (intval == 0) {
+        //   llvm::errs() << "Division by zero is not allowed." << "\n";
+        //   HasError = true;
+        // }
       }
     }
   };
@@ -108,15 +109,9 @@ public:
 
     dest->accept(*this);
 
-    if (dest->getKind() == Factor::Number) {
-        llvm::errs() << "Assignment destination must be an identifier.";
-        HasError = true;
-    }
-
     if (dest->getKind() == Factor::Ident) {
       if (ResultFinder && !OnCheck)
         if (dest->getVal().str().find(VariableName[VariableNameLastIndex]) != std::string::npos) {
-            // system(dest->getVal().str().c_str());
             LastResultAssignment = &Node;
             if(!Flag)
               Flag = true;
@@ -132,9 +127,21 @@ public:
             }
         }
       }
+      if (DeleteTime)
+      {
+        AsertDelete = true;
+        for(int i=0; i<VariableNameNextIndex; i++){
+          if (dest->getVal().str().find(VariableName[i]) != std::string::npos){
+            llvm::errs() << "Variable " << dest->getVal().str() << " is not dead\n";
+            AsertDelete = false;
+          }
+        }
+        if (AsertDelete)
+        {
+          llvm::errs() << "Variable " << dest->getVal().str() << " is dead\n";
+        }
+      }
       // Check if the identifier is in the scope
-      if (Scope.find(dest->getVal()) == Scope.end())
-        error(Not, dest->getVal());
     }
 
     if (Node.getRight())
@@ -146,16 +153,26 @@ public:
     if (ResultFinder)
     {
       ResoltPointer++;
-    }    
+    }
     for (auto I = Node.begin(), E = Node.end(); I != E;
          ++I)
     {
-      if (ResultFinder && !OnCheck)
-        if (((llvm::StringRef *)I)->str().find(VariableName[VariableNameLastIndex]) != std::string::npos) {
-            // system(((llvm::StringRef *)I)->str().c_str());
+      if (DeleteTime)
+      {
+        AsertDelete = true;
+        for(int i=0; i<VariableNameNextIndex; i++)
+        {
+          if (((llvm::StringRef *)I)->str().find(VariableName[i]) != std::string::npos){
+            llvm::errs() << "Variable " << ((llvm::StringRef *)I)->str() << " is not dead\n";
+            AsertDelete = false;
+            break;
+          }
         }
-      if (!Scope.insert(*I).second)
-        error(Twice, *I); // If the insertion fails (element already exists in Scope), report a "Twice" error
+        if (AsertDelete)
+        {
+          llvm::errs() << "Variable " << ((llvm::StringRef *)I)->str() << " is dead\n";
+        }
+      }
     }
     if (Node.getExpr())
       Node.getExpr()->accept(*this); // If the Declaration node has an expression, recursively visit the expression node
@@ -177,9 +194,12 @@ void Opt::optimizer(AST *Tree) {
   if (!Tree)
     return ; // If the input AST is not valid, return false indicating no errors
 
+  DeleteTime = false;
+
   InputCheck Checks[100];
   int CheckIndex = 0;
 
+  AsertDelete = false;
 
   VariableName[0] = "Result";
 
@@ -191,14 +211,13 @@ void Opt::optimizer(AST *Tree) {
   llvm::SmallVector<Expr *> commands = tmp->getExprs();
 
   Tree->accept(Checks[CheckIndex++]); // Find the last Assignment to the Result value by traversing the AST using the accept function
-  commands.erase(commands.begin() + ResoltPointer - 1, commands.end());
+  commands.erase(commands.begin() + ResoltPointer , commands.end());
 
-  llvm::errs() << "Resolt Fount on " << ResoltPointer - 1<< "th command: \n";
+  llvm::errs() << "Resolt Fount on " << ResoltPointer << "th command: \n";
   GSM * alter = new GSM(commands);
   Tree = (AST *) alter;
 
   ResultFinder = false;
-  llvm::errs() << "Live variables: ";
   Tree->accept(Checks[CheckIndex++]); // Find the last Assignment to the Result value by traversing the AST using the accept function
 
   while (VariableNameLastIndex < VariableNameNextIndex - 1)
@@ -212,7 +231,36 @@ void Opt::optimizer(AST *Tree) {
     ResultFinder = false;
     Tree->accept(Checks[CheckIndex++]); // Find the last Assignment to the Result value by traversing the AST using the accept function
   }
+
+  tmp = (GSM *)Tree;
+  commands = tmp->getExprs();
+
+  llvm::errs() << "Live variables: ";
+  for (int i=0; i<VariableNameNextIndex; i++)
+    llvm::errs() << VariableName[i] << ", ";
   llvm::errs() << "\n";
+
+  ResultFinder = false;
+  OnCheck = false;
+  int length = commands.size();
+  DeleteTime = true;
+
+  for (int j=0; j<length; j++)
+  {
+    llvm::errs() << "Checking " << j << "\n";
+    AsertDelete = false;
+    commands[j]->accept(Checks[CheckIndex++]);
+    if (AsertDelete)
+    {
+      llvm::errs() << "DELETE " << j << "\n";
+      commands.erase(commands.begin() + j, commands.begin() + j + 1);
+      length--;
+    }
+  }
+  
+  alter = new GSM(commands);
+  Tree = (AST *) alter;
+
   Opt::Tree = Tree;
   return;
 }
