@@ -13,7 +13,6 @@ Expr * RightHandSide;
 
 bool ResultFinder;
 bool OnCheck;
-bool Flag = false;
 
 string VariableName[100];
 int VariableNameNextIndex = 1;
@@ -90,21 +89,12 @@ public:
       if (right && f->getKind() == Factor::ValueKind::Number) {
         int intval;
         f->getVal().getAsInteger(10, intval);
-
-        // if (intval == 0) {
-        //   llvm::errs() << "Division by zero is not allowed." << "\n";
-        //   HasError = true;
-        // }
       }
     }
   };
 
   // Visit function for Assignment nodes
   virtual void visit(Assignment &Node) override {
-    if (!Flag)
-    {
-      ResoltPointer++;
-    }
     Factor *dest = Node.getLeft();
 
     dest->accept(*this);
@@ -113,8 +103,6 @@ public:
       if (ResultFinder && !OnCheck)
         if (dest->getVal().str().find(VariableName[VariableNameLastIndex]) != std::string::npos) {
             LastResultAssignment = &Node;
-            if(!Flag)
-              Flag = true;
         }
       if (!ResultFinder && !OnCheck)
       {
@@ -150,13 +138,24 @@ public:
   };
 
   virtual void visit(Declaration &Node) override {
-    if (!Flag)
-    {
-      ResoltPointer++;
-    }
     for (auto I = Node.begin(), E = Node.end(); I != E;
          ++I)
     {
+      if (ResultFinder && !OnCheck)
+        if (((llvm::StringRef *)I)->str().find(VariableName[VariableNameLastIndex]) != std::string::npos) {
+            LastResultAssignment = (Assignment *)&Node;
+        }
+      if (!ResultFinder && !OnCheck)
+      {
+        if (((llvm::StringRef *)I)->str().find(VariableName[VariableNameLastIndex]) != std::string::npos)
+        {
+            if (LastResultAssignment == (Assignment *)&Node)
+            {
+                RightHandSide = Node.getExpr();
+                OnCheck = true;
+            }
+        }
+      }
       if (DeleteTime)
       {
         AsertDelete = true;
@@ -176,6 +175,8 @@ public:
     }
     if (Node.getExpr())
       Node.getExpr()->accept(*this); // If the Declaration node has an expression, recursively visit the expression node
+
+    OnCheck = false;
   };
 
   virtual void visit(LoopStatement &Node) override {
@@ -223,11 +224,8 @@ void Opt::optimizer(AST *Tree) {
   
   commands.erase(commands.begin() + ResoltPointer , commands.end());
 
-  llvm::errs() << "Resolt Fount on " << ResoltPointer << "th command: \n";
   GSM * alter = new GSM(commands);
   Tree = (AST *) alter;
-
-  llvm::errs()<< "------------" << ResoltPointer << "\n";
 
   ResultFinder = false;
   Tree->accept(Checks[CheckIndex++]); // Find the last Assignment to the Result value by traversing the AST using the accept function
@@ -259,12 +257,10 @@ void Opt::optimizer(AST *Tree) {
 
   for (int j=0; j<length; j++)
   {
-    llvm::errs() << "Checking " << j << "\n";
     AsertDelete = false;
     commands[j]->accept(Checks[CheckIndex++]);
     if (AsertDelete)
     {
-      llvm::errs() << "DELETE " << j << "\n";
       commands.erase(commands.begin() + j, commands.begin() + j + 1);
       length--;
     }
