@@ -150,7 +150,7 @@ public:
   };
 
   virtual void visit(Declaration &Node) override {
-    if (ResultFinder)
+    if (!Flag)
     {
       ResoltPointer++;
     }
@@ -211,11 +211,23 @@ void Opt::optimizer(AST *Tree) {
   llvm::SmallVector<Expr *> commands = tmp->getExprs();
 
   Tree->accept(Checks[CheckIndex++]); // Find the last Assignment to the Result value by traversing the AST using the accept function
+  
+  int length2 = commands.size();
+  for (int j=0; j<length2; j++)
+  {
+    if (commands[j] == LastResultAssignment){
+      ResoltPointer = j+1;
+      break;
+    }
+  }
+  
   commands.erase(commands.begin() + ResoltPointer , commands.end());
 
   llvm::errs() << "Resolt Fount on " << ResoltPointer << "th command: \n";
   GSM * alter = new GSM(commands);
   Tree = (AST *) alter;
+
+  llvm::errs()<< "------------" << ResoltPointer << "\n";
 
   ResultFinder = false;
   Tree->accept(Checks[CheckIndex++]); // Find the last Assignment to the Result value by traversing the AST using the accept function
